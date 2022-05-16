@@ -18,7 +18,7 @@ pub fn build(b: *std.build.Builder) void {
 
     const lib = b.addStaticLibrary("zig-freetype", "src/main.zig");
     lib.setBuildMode(mode);
-    addLibFreeType(lib) catch unreachable;
+    _ = buildFreetypeFor(lib) catch unreachable;
     lib.install();
 
     const main_tests = b.addTest("src/main.zig");
@@ -27,19 +27,23 @@ pub fn build(b: *std.build.Builder) void {
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&main_tests.step);
 
+    buildExample(b, target, mode);
+}
+
+pub fn buildExample(b: *std.build.Builder, target: std.zig.CrossTarget, mode: std.builtin.Mode) void {
     const example = b.addExecutable("example", "example/main.zig");
-    addLibFreeType(example) catch unreachable;
-    example.addIncludePath("src/ft/");
-    example.addIncludePath(ft2_root ++ "include/");
     example.setBuildMode(mode);
     example.setTarget(target);
-    example.addPackage(pkg);
+    addFreetype(example) catch unreachable;
     example.install();
 
+    // run step
     const example_run = example.run();
     example_run.cwd = "./example/";
     const run_example = b.step("run-example", "Run example");
     run_example.dependOn(&example_run.step);
+
+    // add some tests!
 }
 
 const ft2_root = thisDir() ++ "/third_party/freetype/";
@@ -88,7 +92,7 @@ const ft2_srcs: []const []const u8 = &.{
     "src/winfonts/winfnt.c",
 };
 
-pub fn addLibFreeType(exe: *std.build.LibExeObjStep) !void {
+pub fn buildFreetypeFor(exe: *std.build.LibExeObjStep) !*std.build.LibExeObjStep {
     var builder = exe.builder;
     const allocator = builder.allocator;
     _ = allocator;
@@ -108,8 +112,17 @@ pub fn addLibFreeType(exe: *std.build.LibExeObjStep) !void {
 
     const ft2_lib = builder.addStaticLibrary("freetype2", null);
     ft2_lib.addCSourceFiles(ft2_c_files.items, ft2_flags);
-    ft2_lib.addIncludePath(thisDir() ++ "/src/ft/");
-    ft2_lib.addIncludePath(ft2_root ++ "include/");
+    ft2_lib.addIncludeDir(thisDir() ++ "/src/ft/");
+    ft2_lib.addIncludeDir(ft2_root ++ "include/");
 
+    exe.addIncludeDir(thisDir() ++ "/src/ft/");
+    exe.addIncludeDir(ft2_root ++ "include/");
     exe.linkLibrary(ft2_lib);
+
+    return ft2_lib;
+}
+
+pub fn addFreetype(exe: *std.build.LibExeObjStep) !void {
+    _ = try buildFreetypeFor(exe);
+    exe.addPackage(pkg);
 }
