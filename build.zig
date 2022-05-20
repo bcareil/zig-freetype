@@ -114,9 +114,11 @@ pub fn buildFreetypeFor(exe: *std.build.LibExeObjStep) !*std.build.LibExeObjStep
     ft2_lib.addCSourceFiles(ft2_c_files.items, ft2_flags);
     ft2_lib.addIncludeDir(thisDir() ++ "/src/ft/");
     ft2_lib.addIncludeDir(ft2_root ++ "include/");
+    ft2_lib.linkLibC();
 
     exe.addIncludeDir(thisDir() ++ "/src/ft/");
     exe.addIncludeDir(ft2_root ++ "include/");
+    exe.linkLibC();
     exe.linkLibrary(ft2_lib);
 
     return ft2_lib;
